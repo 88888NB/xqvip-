@@ -1,0 +1,730 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>永夜 Ultra · 诅咒之岛 官方社区</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            overflow-x: hidden;
+            background: #000;
+            font-family: 'Segoe UI', 'Microsoft YaHei', sans-serif;
+            color: #fff;
+            min-height: 100vh;
+        }
+        
+        #canvas-container {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            z-index: 0;
+        }
+        
+        canvas {
+            display: block;
+        }
+        
+        /* 前景内容层 */
+        .content {
+            position: relative;
+            z-index: 10;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 40px 20px;
+            pointer-events: none; /* 让鼠标事件穿透到canvas，除了可交互元素 */
+        }
+        
+        .content > * {
+            pointer-events: auto;
+        }
+        
+        /* 顶部标题 */
+        .hero {
+            text-align: center;
+            margin-top: 10vh;
+            margin-bottom: 60px;
+            animation: fadeInDown 1.2s ease-out;
+        }
+        
+        .hero .brand {
+            font-size: 14px;
+            color: #a0c4ff;
+            letter-spacing: 6px;
+            text-transform: uppercase;
+            margin-bottom: 12px;
+            text-shadow: 0 0 15px rgba(160, 196, 255, 0.6);
+        }
+        
+        .hero h1 {
+            font-size: 56px;
+            font-weight: 200;
+            letter-spacing: 8px;
+            color: #fff;
+            text-shadow: 0 0 30px rgba(160, 196, 255, 0.4), 0 0 60px rgba(100, 150, 255, 0.2);
+            margin-bottom: 16px;
+        }
+        
+        .hero .subtitle {
+            font-size: 16px;
+            color: #8899aa;
+            letter-spacing: 2px;
+            max-width: 500px;
+            line-height: 1.6;
+        }
+        
+        /* 链接卡片网格 */
+        .links-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 20px;
+            width: 100%;
+            max-width: 960px;
+            margin-bottom: 60px;
+        }
+        
+        .link-card {
+            background: rgba(10, 12, 24, 0.75);
+            backdrop-filter: blur(12px);
+            border: 1px solid rgba(100, 150, 255, 0.15);
+            border-radius: 16px;
+            padding: 28px;
+            text-decoration: none;
+            color: inherit;
+            transition: all 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+            position: relative;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            align-items: flex-start;
+            gap: 10px;
+        }
+        
+        .link-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 1px;
+            background: linear-gradient(90deg, transparent, rgba(160, 196, 255, 0.6), transparent);
+            opacity: 0.5;
+            transition: opacity 0.3s;
+        }
+        
+        .link-card:hover {
+            transform: translateY(-4px);
+            border-color: rgba(100, 150, 255, 0.4);
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.6), 0 0 20px rgba(100, 150, 255, 0.15);
+            background: rgba(15, 18, 35, 0.85);
+        }
+        
+        .link-card:hover::before {
+            opacity: 1;
+        }
+        
+        .card-icon {
+            width: 44px;
+            height: 44px;
+            border-radius: 12px;
+            background: rgba(100, 150, 255, 0.1);
+            border: 1px solid rgba(100, 150, 255, 0.2);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 20px;
+            margin-bottom: 4px;
+        }
+        
+        .card-title {
+            font-size: 18px;
+            font-weight: 600;
+            color: #fff;
+            letter-spacing: 1px;
+        }
+        
+        .card-desc {
+            font-size: 13px;
+            color: #667788;
+            line-height: 1.5;
+        }
+        
+        .card-tag {
+            display: inline-block;
+            margin-top: 8px;
+            padding: 4px 12px;
+            border-radius: 20px;
+            background: rgba(100, 150, 255, 0.1);
+            border: 1px solid rgba(100, 150, 255, 0.2);
+            font-size: 11px;
+            color: #a0c4ff;
+            letter-spacing: 1px;
+        }
+        
+        .link-card.primary {
+            border-color: rgba(160, 196, 255, 0.25);
+        }
+        
+        .link-card.primary .card-icon {
+            background: rgba(160, 196, 255, 0.15);
+            border-color: rgba(160, 196, 255, 0.3);
+        }
+        
+        .link-card.download {
+            border-color: rgba(100, 220, 180, 0.2);
+        }
+        
+        .link-card.download .card-icon {
+            background: rgba(100, 220, 180, 0.1);
+            border-color: rgba(100, 220, 180, 0.25);
+        }
+        
+        .link-card.download .card-tag {
+            background: rgba(100, 220, 180, 0.1);
+            border-color: rgba(100, 220, 180, 0.2);
+            color: #8fdcc0;
+        }
+        
+        /* 底部 */
+        .footer {
+            margin-top: auto;
+            padding-top: 40px;
+            text-align: center;
+            font-size: 12px;
+            color: #445566;
+            letter-spacing: 1px;
+            animation: fadeInUp 1.2s ease-out 0.3s both;
+        }
+        
+        .footer a {
+            color: #667788;
+            text-decoration: none;
+            transition: color 0.3s;
+        }
+        
+        .footer a:hover {
+            color: #a0c4ff;
+        }
+        
+        /* 加载画面 */
+        #loading {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: #000;
+            z-index: 100;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            transition: opacity 1s;
+        }
+        
+        #loading.hidden {
+            opacity: 0;
+            pointer-events: none;
+        }
+        
+        .loader {
+            width: 60px;
+            height: 60px;
+            border: 2px solid rgba(100, 150, 255, 0.2);
+            border-top-color: #a0c4ff;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            box-shadow: 0 0 20px rgba(160, 196, 255, 0.3);
+        }
+        
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+        
+        .loading-text {
+            margin-top: 20px;
+            color: #a0c4ff;
+            font-size: 14px;
+            letter-spacing: 2px;
+            animation: pulse 2s ease-in-out infinite;
+        }
+        
+        @keyframes pulse {
+            0%, 100% { opacity: 0.5; }
+            50% { opacity: 1; }
+        }
+        
+        @keyframes fadeInDown {
+            from {
+                opacity: 0;
+                transform: translateY(-30px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+        
+        @keyframes fadeInUp {
+            from {
+                opacity: 0;
+                transform: translateY(30px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+        
+        /* 响应式 */
+        @media (max-width: 768px) {
+            .hero h1 {
+                font-size: 36px;
+                letter-spacing: 4px;
+            }
+            .hero .subtitle {
+                font-size: 14px;
+            }
+            .links-grid {
+                grid-template-columns: 1fr;
+                max-width: 400px;
+            }
+            .content {
+                padding: 30px 16px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div id="loading">
+        <div class="loader"></div>
+        <div class="loading-text">初始化引力场...</div>
+    </div>
+
+    <div id="canvas-container"></div>
+
+    <div class="content">
+        <div class="hero">
+            <div class="brand">永夜 Ultra · 官方社区</div>
+            <h1>诅咒之岛</h1>
+            <div class="subtitle">加入 XQVIP 社群，探索未知领域<br>获取最新版本与独家资源</div>
+        </div>
+
+        <div class="links-grid">
+            <a href="https://qun.qq.com/universal-share/share?ac=1&authKey=3DCYE9iMtvQFY%2B0ean3Fp9p7U7dkQe4Kk8%2F8s9iv88C8OJDCBCP2XOhAjBIbGh06&busi_data=eyJncm91cENvZGUiOiI3MTQyODY0OTkiLCJ0b2tlbiI6Im5Wbi9BL3pIOWoyOVFhZ0lUWHluR2ZoTlpHMFZCS0ZPalBLREFmUnpjS1NhOWpISVBFK09yemRqM3NJQ1UzZjMiLCJ1aW4iOiIzMzA3MzU4MDM4In0%3D&data=-gtS3wkb5Ip9WP3XMh6OocxVSLW0pi-_9EYIOqixODccAN0eBGuvGKQtvTUWRFXcBpRbW5B1OGs9QeQ0DXGR5Q&svctype=4&tempid=h5_group_info" target="_blank" class="link-card primary">
+                <div class="card-icon">🌑</div>
+                <div class="card-title">永夜 Ultra QQ群</div>
+                <div class="card-desc">主社群入口，获取第一手资讯与更新动态</div>
+                <span class="card-tag">QQ 群</span>
+            </a>
+
+            <a href="https://qun.qq.com/universal-share/share?ac=1&authKey=THcZSg2%2B74n88iE8YZEac8zyCUxv5rcmRpZdsTTD01bqRsfICNbsK7X0eL5cPdIo&busi_data=eyJncm91cENvZGUiOiI2MjQ3ODA2NTgiLCJ0b2tlbiI6Ii92L3ZoRWpJQXJIUkNWMm5uYUNhYTBtZjZMSk5GcmV0RDFTekZBUnU2UXJnbGJSaXpQSmhUbG1TVit1VTVreDAiLCJ1aW4iOiIzMzA3MzU4MDM4In0%3D&data=3EuLe6qFzSXKZ6hZA97sw2brElQ8vKy_LNmcmtIKV-lUnyuGvOTEm-kRH-eE15Idxy7qUtRuwj3wTRSolYjZyQ&svctype=4&tempid=h5_group_info" target="_blank" class="link-card primary">
+                <div class="card-icon">✦</div>
+                <div class="card-title">［𝑿𝑸𝑽𝑰𝑷·𝑼𝑳𝑻𝑹𝑨］ 一群</div>
+                <div class="card-desc">XQVIP 核心玩家聚集地，高端资源分享</div>
+                <span class="card-tag">一群</span>
+            </a>
+
+            <a href="https://qun.qq.com/universal-share/share?ac=1&authKey=%2FctHWV0Wyokh8%2BgGzNnJK6W7xF2J%2BGR%2F8i%2Fa%2F06BVoevvaCqwa5mI8OkWf0vM%2BvL&busi_data=eyJncm91cENvZGUiOiIyMzc2NzUxNzMiLCJ0b2tlbiI6ImJLeFViWHVRbzRSZ2dacklFYXFjVEZ6c0Z0K2NZbXE3MVQrMDhnUHh2Q2RUeUZQMHhydW9zQlVwK2R2NW93ZW0iLCJ1aW4iOiIzMzA3MzU4MDM4In0%3D&data=AellYeHMVbfEBhv6Pyetm3MvpncgWD2nN3AM6dWP_wwkNet3n6n5E0A4hzxnGcuBLnGyhAsG7CFEj4ZKzsIPMw&svctype=4&tempid=h5_group_info" target="_blank" class="link-card primary">
+                <div class="card-icon">✦</div>
+                <div class="card-title">［𝑿𝑸𝑽𝑰𝑷·𝑼𝑳𝑻𝑹𝑨］ 二群</div>
+                <div class="card-desc">新成员欢迎通道，同样享有完整资源权限</div>
+                <span class="card-tag">二群</span>
+            </a>
+
+            <a href="https://pd.qq.com/s/cb5yli2ny?b=9" target="_blank" class="link-card">
+                <div class="card-icon">📡</div>
+                <div class="card-title">诅咒之岛 QQ频道</div>
+                <div class="card-desc">XQ 社区官方频道，频道内搜索与话题讨论</div>
+                <span class="card-tag">QQ 频道</span>
+            </a>
+
+            <a href="https://1813813973.share.123pan.cn/123pan/HzNlVv-FUZkh" target="_blank" class="link-card download">
+                <div class="card-icon">☁️</div>
+                <div class="card-title">官方下载云盘</div>
+                <div class="card-desc">123云盘资源库，获取最新客户端与补丁</div>
+                <span class="card-tag">123云盘</span>
+            </a>
+        </div>
+
+        <div class="footer">
+            <p>永夜 Ultra · 诅咒之岛 官方社区门户</p>
+            <p style="margin-top:6px;">背景渲染：实时黑洞光线步进</p>
+        </div>
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/postprocessing/EffectComposer.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/postprocessing/RenderPass.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/postprocessing/ShaderPass.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/postprocessing/UnrealBloomPass.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/shaders/CopyShader.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/shaders/LuminosityHighPassShader.js"></script>
+
+    <script>
+        const vertexShader = `
+            varying vec2 vUv;
+            void main() {
+                vUv = uv;
+                gl_Position = vec4(position, 1.0);
+            }
+        `;
+
+        const fragmentShader = `
+            precision highp float;
+            
+            uniform float uTime;
+            uniform vec2 uResolution;
+            uniform vec3 uCameraPos;
+            uniform vec3 uCameraTarget;
+            
+            varying vec2 vUv;
+            
+            const float MASS = 1.0;
+            const float BRIGHTNESS = 1.5;
+            const float SPEED = 0.5;
+            const float LENS_STRENGTH = 1.0;
+            const float DISC_THICKNESS = 0.15;
+            const float DOPPLER_STRENGTH = 0.8;
+            const int MAX_STEPS = 100;
+            
+            vec3 hash33(vec3 p) {
+                p = vec3(dot(p, vec3(127.1, 311.7, 74.7)),
+                         dot(p, vec3(269.5, 183.3, 246.1)),
+                         dot(p, vec3(113.5, 271.9, 124.6)));
+                return fract(sin(p) * 43758.5453);
+            }
+            
+            float hash12(vec2 p) {
+                vec3 p3 = fract(vec3(p.xyx) * 0.1031);
+                p3 += dot(p3, p3.yzx + 33.33);
+                return fract((p3.x + p3.y) * p3.z);
+            }
+            
+            float noise3D(vec3 p) {
+                vec3 i = floor(p);
+                vec3 f = fract(p);
+                f = f * f * (3.0 - 2.0 * f);
+                
+                float n = mix(
+                    mix(
+                        mix(hash12(i.xy + vec2(0.0, 0.0) + i.z * 57.0),
+                            hash12(i.xy + vec2(1.0, 0.0) + i.z * 57.0), f.x),
+                        mix(hash12(i.xy + vec2(0.0, 1.0) + i.z * 57.0),
+                            hash12(i.xy + vec2(1.0, 1.0) + i.z * 57.0), f.x),
+                        f.y
+                    ),
+                    mix(
+                        mix(hash12(i.xy + vec2(0.0, 0.0) + (i.z + 1.0) * 57.0),
+                            hash12(i.xy + vec2(1.0, 0.0) + (i.z + 1.0) * 57.0), f.x),
+                        mix(hash12(i.xy + vec2(0.0, 1.0) + (i.z + 1.0) * 57.0),
+                            hash12(i.xy + vec2(1.0, 1.0) + (i.z + 1.0) * 57.0), f.x),
+                        f.y
+                    ),
+                    f.z
+                );
+                return n;
+            }
+            
+            float fbm(vec3 p, int octaves) {
+                float value = 0.0;
+                float amplitude = 0.5;
+                float frequency = 1.0;
+                for (int i = 0; i < 6; i++) {
+                    if (i >= octaves) break;
+                    value += amplitude * noise3D(p * frequency);
+                    amplitude *= 0.5;
+                    frequency *= 2.0;
+                }
+                return value;
+            }
+            
+            vec3 starField(vec3 rayDir) {
+                vec3 color = vec3(0.0);
+                
+                float theta = atan(rayDir.z, rayDir.x);
+                float phi = asin(clamp(rayDir.y, -1.0, 1.0));
+                
+                vec2 gridUV = vec2(theta, phi) * 80.0;
+                vec2 cell = floor(gridUV);
+                vec2 cellUV = fract(gridUV);
+                
+                float cellHash = hash12(cell);
+                float starProb = step(0.97, cellHash);
+                
+                vec2 starPos = hash33(vec3(cell, 0.0)).xy * 0.8 + 0.1;
+                float dist = length(cellUV - starPos);
+                
+                float starSize = hash12(cell + 100.0) * 0.015 + 0.005;
+                float starCore = smoothstep(starSize, 0.0, dist);
+                float starGlow = smoothstep(starSize * 4.0, 0.0, dist) * 0.3;
+                float intensity = (starCore + starGlow) * starProb;
+                
+                float temp = hash12(cell + 200.0);
+                vec3 starColor = mix(vec3(0.8, 0.9, 1.0), vec3(1.0, 0.9, 0.7), temp);
+                
+                color += starColor * intensity * 2.0;
+                
+                float nebula = fbm(rayDir * 3.0 + vec3(uTime * 0.02), 4);
+                color += vec3(0.05, 0.08, 0.15) * nebula * 0.3;
+                
+                return color;
+            }
+            
+            vec3 blackbody(float t) {
+                t = clamp(t, 1000.0, 15000.0) / 1000.0;
+                vec3 color;
+                float x = (t - 2.0) / 10.0;
+                color.r = smoothstep(0.0, 0.4, x) + smoothstep(0.4, 1.0, x) * 0.5;
+                color.g = smoothstep(0.2, 0.6, x);
+                color.b = smoothstep(0.5, 1.0, x) * 0.8;
+                color = clamp(color, 0.0, 1.0);
+                return color;
+            }
+            
+            vec4 accretionDisk(vec3 pos, vec3 center, vec3 normal, float innerR, float outerR) {
+                vec3 toCenter = pos - center;
+                float height = abs(dot(toCenter, normal));
+                vec3 proj = toCenter - dot(toCenter, normal) * normal;
+                float radius = length(proj);
+                
+                if (radius < innerR || radius > outerR || height > DISC_THICKNESS * radius) {
+                    return vec4(0.0);
+                }
+                
+                float t = (radius - innerR) / (outerR - innerR);
+                float temp = mix(12000.0, 3000.0, pow(t, 0.7));
+                float orbitalSpeed = 1.0 / sqrt(radius * 0.5);
+                
+                float angle = atan(proj.z, proj.x);
+                float timeOffset = uTime * SPEED * orbitalSpeed;
+                
+                vec3 noisePos = vec3(cos(angle + timeOffset) * radius, sin(angle + timeOffset) * radius, uTime * 0.1);
+                float turbulence = fbm(noisePos * 2.0, 4);
+                
+                float density = exp(-pow((t - 0.3) / 0.4, 2.0)) * (1.0 + turbulence * 0.5);
+                density *= smoothstep(0.0, 0.1, t) * smoothstep(1.0, 0.8, t);
+                
+                vec3 color = blackbody(temp) * BRIGHTNESS;
+                
+                if (DOPPLER_STRENGTH > 0.0) {
+                    float viewAngle = dot(normalize(proj), normalize(vec3(0.0, 0.0, 1.0)));
+                    float doppler = 1.0 + viewAngle * 0.3 * DOPPLER_STRENGTH;
+                    color *= doppler;
+                    float shift = viewAngle * 0.2 * DOPPLER_STRENGTH;
+                    color.b *= 1.0 + shift;
+                    color.r *= 1.0 - shift * 0.5;
+                }
+                
+                float alpha = density * smoothstep(DISC_THICKNESS * radius, 0.0, height);
+                alpha = clamp(alpha, 0.0, 1.0);
+                
+                return vec4(color * alpha, alpha);
+            }
+            
+            void main() {
+                vec2 uv = vUv * 2.0 - 1.0;
+                uv.x *= uResolution.x / uResolution.y;
+                
+                vec3 camPos = uCameraPos;
+                vec3 camTarget = uCameraTarget;
+                vec3 camForward = normalize(camTarget - camPos);
+                vec3 worldUp = vec3(0.0, 1.0, 0.0);
+                vec3 camRight = normalize(cross(worldUp, camForward));
+                vec3 camUp = cross(camForward, camRight);
+                
+                float fov = 1.2;
+                vec3 rayDir = normalize(camForward * fov + camRight * uv.x + camUp * uv.y);
+                
+                float Rs = 2.0 * MASS;
+                vec3 blackHoleCenter = vec3(0.0);
+                
+                vec3 currentPos = camPos;
+                vec3 currentDir = rayDir;
+                
+                vec3 accumulatedColor = vec3(0.0);
+                float accumulatedAlpha = 0.0;
+                
+                vec3 discNormal = normalize(vec3(0.3, 1.0, 0.2));
+                
+                bool hitEventHorizon = false;
+                
+                for (int i = 0; i < MAX_STEPS; i++) {
+                    if (hitEventHorizon) break;
+                    if (accumulatedAlpha > 0.99) break;
+                    
+                    float distToCenter = length(currentPos - blackHoleCenter);
+                    
+                    if (distToCenter < Rs * 1.05) {
+                        hitEventHorizon = true;
+                        break;
+                    }
+                    
+                    float stepSize = max(0.05, min(distToCenter * 0.15, 0.8));
+                    
+                    if (distToCenter < Rs * 3.0) {
+                        stepSize = min(stepSize, distToCenter * 0.1);
+                        stepSize = max(stepSize, 0.02);
+                    }
+                    
+                    if (distToCenter > Rs * 1.5) {
+                        vec3 toCenter = normalize(blackHoleCenter - currentPos);
+                        float force = (Rs * 0.5) / (distToCenter * distToCenter);
+                        force *= LENS_STRENGTH;
+                        
+                        float relFactor = 1.0;
+                        if (distToCenter < Rs * 5.0) {
+                            relFactor = 1.0 + (5.0 * Rs / distToCenter - 1.0) * 0.5;
+                        }
+                        
+                        currentDir = normalize(currentDir + toCenter * force * stepSize * relFactor);
+                    }
+                    
+                    vec4 discSample = accretionDisk(currentPos, blackHoleCenter, discNormal, Rs * 2.5, Rs * 12.0);
+                    
+                    if (discSample.a > 0.0) {
+                        float alpha = discSample.a * (1.0 - accumulatedAlpha);
+                        accumulatedColor += discSample.rgb * alpha;
+                        accumulatedAlpha += alpha;
+                    }
+                    
+                    currentPos += currentDir * stepSize;
+                }
+                
+                vec3 bgColor = starField(currentDir);
+                
+                if (hitEventHorizon) {
+                    bgColor = vec3(0.0);
+                }
+                
+                vec3 finalColor = mix(bgColor, accumulatedColor, accumulatedAlpha);
+                
+                if (!hitEventHorizon) {
+                    float closestApproach = length(cross(currentPos - blackHoleCenter, currentDir));
+                    float photonRing = smoothstep(Rs * 2.5, Rs * 1.8, closestApproach) * 
+                                       smoothstep(Rs * 1.2, Rs * 1.8, closestApproach);
+                    finalColor += vec3(1.0, 0.9, 0.7) * photonRing * 0.3 * BRIGHTNESS;
+                }
+                
+                finalColor = finalColor / (1.0 + finalColor * 0.5);
+                finalColor = pow(finalColor, vec3(0.4545));
+                
+                gl_FragColor = vec4(finalColor, 1.0);
+            }
+        `;
+
+        let scene, camera, renderer, composer;
+        let controls;
+        let clock = new THREE.Clock();
+        let uniforms;
+        
+        function init() {
+            const container = document.getElementById('canvas-container');
+            
+            scene = new THREE.Scene();
+            
+            camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+            camera.position.set(0, 3, 12);
+            
+            renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+            container.appendChild(renderer.domElement);
+            
+            controls = new THREE.OrbitControls(camera, renderer.domElement);
+            controls.enableDamping = true;
+            controls.dampingFactor = 0.05;
+            controls.minDistance = 5;
+            controls.maxDistance = 15;
+            controls.autoRotate = true;
+            controls.autoRotateSpeed = 0.5;
+            
+            uniforms = {
+                uTime: { value: 0.0 },
+                uResolution: { value: new THREE.Vector2(window.innerWidth, window.innerHeight) },
+                uCameraPos: { value: camera.position },
+                uCameraTarget: { value: new THREE.Vector3(0, 0, 0) }
+            };
+            
+            const geometry = new THREE.PlaneGeometry(2, 2);
+            const material = new THREE.ShaderMaterial({
+                vertexShader: vertexShader,
+                fragmentShader: fragmentShader,
+                uniforms: uniforms,
+                depthWrite: false,
+                depthTest: false
+            });
+            
+            const quad = new THREE.Mesh(geometry, material);
+            scene.add(quad);
+            
+            initPostProcessing();
+            
+            window.addEventListener('resize', onWindowResize);
+            
+            setTimeout(() => {
+                document.getElementById('loading').classList.add('hidden');
+            }, 1000);
+            
+            animate();
+        }
+        
+        function initPostProcessing() {
+            composer = new THREE.EffectComposer(renderer);
+            
+            const renderPass = new THREE.RenderPass(scene, camera);
+            composer.addPass(renderPass);
+            
+            const bloomPass = new THREE.UnrealBloomPass(
+                new THREE.Vector2(window.innerWidth, window.innerHeight),
+                1.2,
+                0.4,
+                0.85
+            );
+            composer.addPass(bloomPass);
+        }
+        
+        function onWindowResize() {
+            const width = window.innerWidth;
+            const height = window.innerHeight;
+            
+            camera.aspect = width / height;
+            camera.updateProjectionMatrix();
+            
+            renderer.setSize(width, height);
+            composer.setSize(width, height);
+            
+            uniforms.uResolution.value.set(width, height);
+        }
+        
+        function animate() {
+            requestAnimationFrame(animate);
+            
+            const elapsedTime = clock.getElapsedTime();
+            uniforms.uTime.value = elapsedTime;
+            
+            controls.update();
+            uniforms.uCameraPos.value.copy(camera.position);
+            
+            const target = new THREE.Vector3();
+            camera.getWorldDirection(target);
+            target.multiplyScalar(10).add(camera.position);
+            uniforms.uCameraTarget.value.copy(controls.target);
+            
+            composer.render();
+        }
+        
+        init();
+    </script>
+</body>
+</html>
